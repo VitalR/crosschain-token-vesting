@@ -2,15 +2,17 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
 describe("CrossChainTokenVesting", () => {
+    let token, vesting
     let vestingAmount = ethers.utils.parseEther("100")
-
     let vestingStart, vestingDuration, vestingAddresses
+
+    const mainnet = 1
 
     beforeEach(async () => {
         [ owner, user ] = await ethers.getSigners()
 
         const Token = await ethers.getContractFactory("ERC20Token")
-        const token = await Token.deploy()
+        token = await Token.deploy()
         await token.deployed()
 
         let block = await ethers.provider.getBlock()
@@ -31,11 +33,11 @@ describe("CrossChainTokenVesting", () => {
     })
 
     describe("Claimable Amount", () => {
-        it.only("Should return 0 tokens of claimableAmount in case claiming before vestingStart", async () => {
+        it("Should return 0 tokens of claimableAmount in case claiming before vestingStart", async () => {
             expect(await vesting.getAmountToBeClaimed(user.address)).to.eq(ethers.utils.parseEther("0"))
         })
     
-        it.only("Should return all amount of vested tokens after vestingDuration", async () => {
+        it("Should return all amount of vested tokens after vestingDuration", async () => {
             let block = await ethers.provider.getBlock()
             let duration = block.timestamp + 500
     
@@ -45,7 +47,7 @@ describe("CrossChainTokenVesting", () => {
             expect(await vesting.getAmountToBeClaimed(user.address)).to.eq(ethers.utils.parseEther("100"))
         })
     
-        it.only("Should return vested tokens in linear maner during vestingDuration", async () => {
+        it("Should return vested tokens in linear maner during vestingDuration", async () => {
             let quart_duration = vestingStart + 30
             await ethers.provider.send("evm_setNextBlockTimestamp", [quart_duration,])
             await ethers.provider.send("evm_mine")
@@ -60,6 +62,22 @@ describe("CrossChainTokenVesting", () => {
         })
     })
 
+    describe("Claim Tokens", () => {
+        it("Should be possible to claim all vested tokens after vestingDuration", async () => {
+            expect(await token.balanceOf(user.address)).to.eq(0)
+
+            block = await ethers.provider.getBlock()
+            let duration = block.timestamp + 500
+    
+            await ethers.provider.send("evm_setNextBlockTimestamp", [duration,])
+            await ethers.provider.send("evm_mine")
+    
+            expect(await vesting.getAmountToBeClaimed(user.address)).to.eq(ethers.utils.parseEther("100"))
+
+            let tx = await vesting.connect(user).claimTokens(mainnet)
+            await tx.wait()
+
+            expect(await token.balanceOf(user.address)).to.eq(vestingAmount)
+        })
+    })
 })
-
-

@@ -3,8 +3,10 @@ pragma solidity ^0.8.17;
 
 import "./ERC20Token.sol";
 
+import "hardhat/console.sol";
+
 contract CrossChainTokenVesting {
-    IERC20 public immutable token;
+    ERC20Token public immutable token;
     uint256 public immutable vestingAmount;
 
     uint256 public immutable vestingStart;      // unix timestamp
@@ -14,8 +16,10 @@ contract CrossChainTokenVesting {
     mapping(address => uint256) public claimedAmount;
     mapping(address => bool) public beneficiaries;
 
+    event TokensClaimed(address sender, uint256 chainId, uint256 claimableAmount);
+
     constructor(
-        IERC20 _token,
+        ERC20Token _token,
         uint256 _vestingStart,
         uint256 _vestingDuration,
         uint256 _vestingAmount,
@@ -57,4 +61,23 @@ contract CrossChainTokenVesting {
             return _vestedAmounts - claimedAmount[_beneficiary];
         }
     }
+
+    function claimTokens(uint256 _chainId) external {
+        require(_chainId == 1, "Unsupported chain");
+
+        uint256 _claimableAmount = getAmountToBeClaimed(msg.sender);
+        require(_claimableAmount > 0, "No available tokens");
+
+        claimedAmount[msg.sender] += _claimableAmount;
+
+        if (_chainId == 1) {
+            // Mint tokens on the main chain
+            require(token.mint(msg.sender, _claimableAmount), "Claim tokens on mainnet failed");
+        }
+
+        vestedAmounts[msg.sender] -= _claimableAmount;
+
+        emit TokensClaimed(msg.sender, _chainId, _claimableAmount);
+    }
+
 }
