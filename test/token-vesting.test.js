@@ -24,6 +24,7 @@ describe("CrossChainTokenVesting", () => {
         const CrossChainTokenVesting = await ethers.getContractFactory("CrossChainTokenVesting")
         vesting = await CrossChainTokenVesting.deploy(
             token.address,
+            token.address,
             vestingStart,
             vestingDuration,
             vestingAmount,

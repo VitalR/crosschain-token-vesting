@@ -15,7 +15,7 @@ let vestingAmount = ethers.utils.parseEther("100")
 let vestingStart, vestingDuration, vestingAddresses
 
 // run script: 01-deploy-token.js - deployed token address from fuji nerwork
-const tokenAddress = '0xc1A301F61eBCB7d367F95bAC19bA997c94b5D013' //--network fuji 0xAbE4B1D4BA8b473Ec3388E0F039FDab50B8da8F6
+const tokenAddressB = '0xc1A301F61eBCB7d367F95bAC19bA997c94b5D013' //--network fuji 0xAbE4B1D4BA8b473Ec3388E0F039FDab50B8da8F6
 
 async function main() {
     let block = await ethers.provider.getBlock()
@@ -28,7 +28,8 @@ async function main() {
     console.log("CrossChainTokenVesting is deploying...")
     const CrossChainTokenVesting = await ethers.getContractFactory("CrossChainTokenVesting")
     const vesting = await CrossChainTokenVesting.deploy(
-        tokenAddress,
+        tokenAddressB,
+        tokenAddressB,
         vestingStart,
         vestingDuration,
         vestingAmount,

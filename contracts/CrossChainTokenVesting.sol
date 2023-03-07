@@ -9,7 +9,8 @@ import "hardhat/console.sol";
 contract CrossChainTokenVesting {
     address public owner;
     IAnycallProxy public AnyCallV7;
-    ERC20Token public immutable token;
+    ERC20Token public immutable tokenA;     // token address on main chain
+    ERC20Token public immutable tokenB;     // token address on target chain
     uint256 public immutable vestingAmount;
 
     uint256 public immutable vestingStart;      // unix timestamp
@@ -27,7 +28,8 @@ contract CrossChainTokenVesting {
     }
 
     constructor(
-        ERC20Token _token,
+        ERC20Token _tokenA,
+        ERC20Token _tokenB,
         uint256 _vestingStart,
         uint256 _vestingDuration,
         uint256 _vestingAmount,
@@ -40,7 +42,8 @@ contract CrossChainTokenVesting {
 
         owner = msg.sender;
 
-        token = _token;
+        tokenA = _tokenA;
+        tokenB = _tokenB;
         vestingStart = _vestingStart;
         vestingDuration = _vestingDuration;
         vestingAmount = _vestingAmount;
@@ -86,13 +89,13 @@ contract CrossChainTokenVesting {
 
         if (_chainId == 1) {
             // Mint tokens on the main chain
-            require(token.mint(msg.sender, _claimableAmount), "Claim tokens on mainnet failed");
+            require(tokenA.mint(msg.sender, _claimableAmount), "Claim tokens on mainnet failed");
         } else {
             // Send cross-chain message using AnyCall v7
             // AnyCallV7 is a proxy contract that forwards a message to another chain
             bytes memory data = abi.encodeWithSignature("_mint(address,uint256)", msg.sender, _claimableAmount);
 
-            IAnycallProxy(AnyCallV7).anyCall{ value: msg.value }(address(token), data, _chainId, 0, "");
+            IAnycallProxy(AnyCallV7).anyCall{ value: msg.value }(address(tokenB), data, _chainId, 0, "");
         }
 
         vestedAmounts[msg.sender] -= _claimableAmount;
