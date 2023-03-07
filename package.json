@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "compile": "npx hardhat compile",
-    "test": "npx hardhat test"
+    "test": "npx hardhat test",
+    "deployToken": "npx hardhat run scripts/01-deploy-token.js",
+    "claimTokens": "npx hardhat run scripts/02-claim-tokens.js"
   },
   "keywords": [],
   "author": "VitalR",
