@@ -1,15 +1,12 @@
-# Basic Sample Hardhat Project
+# Cross-chain Token Vesting
 
-This project demonstrates a basic Hardhat use case. It comes with a sample contract, a test for that contract, a sample script that deploys that contract, and an example of a task implementation, which simply lists the available accounts.
+https://docs.multichain.org/developer-guide/anycall-v7/how-to-integrate-anycall-v7
 
-Try running some of the following tasks:
+Usage:
 
 ```shell
-npx hardhat accounts
-npx hardhat compile
-npx hardhat clean
-npx hardhat test
-npx hardhat node
-node scripts/sample-script.js
-npx hardhat help
+yarn
+yarn test
+yarn deployToken --network fuji
+yarn claimTokens --network ftm
 ```
