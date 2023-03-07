@@ -2,10 +2,13 @@
 pragma solidity ^0.8.17;
 
 import "./ERC20Token.sol";
+import "./IAnycallProxy.sol";
 
 import "hardhat/console.sol";
 
 contract CrossChainTokenVesting {
+    address public owner;
+    IAnycallProxy public AnyCallV7;
     ERC20Token public immutable token;
     uint256 public immutable vestingAmount;
 
@@ -18,6 +21,11 @@ contract CrossChainTokenVesting {
 
     event TokensClaimed(address sender, uint256 chainId, uint256 claimableAmount);
 
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Only owner");
+        _;
+    }
+
     constructor(
         ERC20Token _token,
         uint256 _vestingStart,
@@ -25,10 +33,12 @@ contract CrossChainTokenVesting {
         uint256 _vestingAmount,
         address[] memory _vestingAddresses
     ) {
-        require(_vestingStart > block.timestamp, "Start time must be in the future");
-        require(_vestingDuration > 0, "Vesting duration must be greater than zero");
+        // require(_vestingStart > block.timestamp, "Start time must be in the future"); commented for running scripts
+        // require(_vestingDuration > 0, "Vesting duration must be greater than zero");
         require(_vestingAmount > 0, "Vesting amount must be greater than zero");
         require(_vestingAddresses.length > 0, "At least one recipient must be specified");
+
+        owner = msg.sender;
 
         token = _token;
         vestingStart = _vestingStart;
@@ -62,8 +72,12 @@ contract CrossChainTokenVesting {
         }
     }
 
-    function claimTokens(uint256 _chainId) external {
-        require(_chainId == 1, "Unsupported chain");
+    // https://docs.multichain.org/developer-guide/anycall-v7/how-to-integrate-anycall-v7
+    // Fantom Testnet (4002): 0xfCea2c562844A7D385a7CB7d5a79cfEE0B673D99
+    // Avalanche Fuji Testnet (43113): 0x461d52769884ca6235b685ef2040f47d30c94eb5
+    // Goerli (5): 0x965f84D915a9eFa2dD81b653e3AE736555d945f4
+    function claimTokens(uint256 _chainId) external payable {
+        require(_chainId == 1 || _chainId == 43113, "Unsupported chain");
 
         uint256 _claimableAmount = getAmountToBeClaimed(msg.sender);
         require(_claimableAmount > 0, "No available tokens");
@@ -73,6 +87,12 @@ contract CrossChainTokenVesting {
         if (_chainId == 1) {
             // Mint tokens on the main chain
             require(token.mint(msg.sender, _claimableAmount), "Claim tokens on mainnet failed");
+        } else {
+            // Send cross-chain message using AnyCall v7
+            // AnyCallV7 is a proxy contract that forwards a message to another chain
+            bytes memory data = abi.encodeWithSignature("_mint(address,uint256)", msg.sender, _claimableAmount);
+
+            IAnycallProxy(AnyCallV7).anyCall{ value: msg.value }(address(token), data, _chainId, 0, "");
         }
 
         vestedAmounts[msg.sender] -= _claimableAmount;
@@ -80,4 +100,11 @@ contract CrossChainTokenVesting {
         emit TokensClaimed(msg.sender, _chainId, _claimableAmount);
     }
 
+    function setAnyCallProxy(IAnycallProxy _anyCallAddress) external onlyOwner {
+        AnyCallV7 = _anyCallAddress;
+    }
+
+    receive() external payable {}
+
+    fallback() external payable {}
 }
